@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Main-Class: com.toybox.MainKt
+Class-Path: netty-common-4.1.118.Final.jar netty-handler-4.1.118.Final.j
+ ar annotations-13.0.jar gson-2.10.1.jar netty-buffer-4.1.118.Final.jar 
+ brotli4j-1.18.0.jar netty-codec-http-4.1.118.Final.jar netty-transport-
+ native-unix-common-4.1.118.Final.jar jsoup-1.18.3.jar netty-codec-4.1.1
+ 18.Final.jar service-1.18.0.jar kotlin-stdlib-2.1.10.jar netty-transpor
+ t-4.1.118.Final.jar netty-resolver-4.1.118.Final.jar native-linux-x86_6
+ 4-1.18.0.jar
+

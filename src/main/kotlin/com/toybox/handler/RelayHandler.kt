@@ -3,6 +3,7 @@ package com.toybox.handler
 import com.toybox.config
 import com.toybox.util.Log
 import com.toybox.util.peerAddress
+import com.toybox.util.set
 import com.toybox.util.writeCompact
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelDuplexHandler
@@ -17,8 +18,12 @@ import io.netty.handler.codec.http.FullHttpRequest
 import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpClientCodec
 import io.netty.handler.codec.http.HttpContentDecompressor
+import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpObjectAggregator
+import io.netty.handler.codec.http.HttpRequest
+import io.netty.handler.codec.http.HttpResponse
 import io.netty.handler.ssl.SslContextBuilder
+import io.netty.util.ReferenceCountUtil
 
 private const val TAG = "RelayHandler"
 
@@ -31,47 +36,57 @@ class RelayHandler: SimpleChannelInboundHandler<FullHttpRequest>() {
     private var clientCtx: ChannelHandlerContext? = null
     private val waitingRequests = ArrayDeque<FullHttpRequest>()
 
-
     override fun channelRead0(ctx: ChannelHandlerContext, msg: FullHttpRequest) {
         Log.i(TAG, "channelRead0: '${ctx.peerAddress()}' -> 'zhihu.com': '${msg.uri()}'")
-        waitingRequests.add(msg.retain()) // 防止被回收
+
+        val host = "www.zhihu.com"
+        msg[HttpHeaderNames.HOST] = host
+        waitingRequests.add(msg.retain(2)) // [1]
+        // [1]. 第一次是保存到列表里，抵消 SimpleChannelInboundHandler 的 release，
+        // 第二次是传递给下一个 handler 需要增加一次
 
         val clientCtx = this.clientCtx
         if (clientCtx == null) {
             // 还没有建立通往 zhihu.com 的真链接，开始发起
             if (waitingRequests.size == 1) {
-                connectToZhiHu(ctx.channel().eventLoop())
+                connectToHost(ctx.channel().eventLoop(), host)
             }
         } else {
-            clientCtx.writeAndFlush(msg.retain())
+            clientCtx.writeAndFlush(msg)
         }
     }
 
     private inner class ClientHandler: ChannelDuplexHandler() {
 
         override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
-            if (msg is FullHttpResponse) {
-                // 组装成 Pair 然后发射出去
-                val request = waitingRequests.removeFirst()
-                ctx.fireChannelRead(
-                    RequestResponsePair(request, msg)
-                )
-            } else {
-                ctx.fireChannelRead(msg)
+            if (msg !is FullHttpResponse) {
+                ReferenceCountUtil.release(msg)
+                return
+            }
+            val req = waitingRequests.removeFirst()
+            try {
+                channelRead0(ctx, req, msg)
+            } finally {
+                req.release()
             }
         }
 
-        override fun write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise) {
-            if (msg is FullHttpResponse) {
-                thisCtx?.writeCompact(msg, promise)?: msg.release()
-            } else {
-                ctx.write(msg, promise)
+        private fun channelRead0(
+            ctx: ChannelHandlerContext, req: HttpRequest, resp: HttpResponse,
+        ) {
+            if (!resp.decoderResult().isSuccess) {
+                thisCtx?.writeAndFlush(resp)
+                return
             }
-        }
-
-        override fun flush(ctx: ChannelHandlerContext) {
-            thisCtx?.flush()
-            ctx.flush()
+            // 歪，有人需要吗？
+            val hitTest = InterceptHitTest(req, resp)
+            ctx.fireUserEventTriggered(hitTest)
+            if (!hitTest.result) {
+                Log.i(TAG, "channelRead0: ignore: '${req.uri()}'")
+                thisCtx?.writeAndFlush(resp)
+                return
+            }
+            ctx.fireChannelRead(resp)
         }
 
         override fun channelActive(ctx: ChannelHandlerContext) {
@@ -83,25 +98,29 @@ class RelayHandler: SimpleChannelInboundHandler<FullHttpRequest>() {
 
         override fun channelInactive(ctx: ChannelHandlerContext?) {
             super.channelInactive(ctx)
-            clientCtx = ctx
+            clientCtx = null
             thisCtx?.close()
-            thisCtx = null
+        }
+
+        override fun write(ctx: ChannelHandlerContext?, msg: Any?, promise: ChannelPromise?) {
+            if (msg is HttpResponse) {
+                thisCtx?.writeAndFlush(msg)
+                return
+            }
+            super.write(ctx, msg, promise)
+        }
+
+        override fun flush(ctx: ChannelHandlerContext?) {
+            thisCtx?.flush()
         }
 
         override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
-            Log.i(TAG, "exceptionCaught: close zhihu connection !", cause)
+            Log.i(TAG, "exceptionCaught: close real connection !", cause)
             ctx.close()
         }
     }
 
-    private class EchoHandler: SimpleChannelInboundHandler<RequestResponsePair>() {
-        override fun channelRead0(ctx: ChannelHandlerContext, msg: RequestResponsePair) {
-//            msg.resp.content().toString(StandardCharsets.UTF_8).println()
-            ctx.writeAndFlush(msg.resp.retain())
-        }
-    }
-
-    private fun connectToZhiHu(loop: EventLoop) {
+    private fun connectToHost(loop: EventLoop, host: String) {
         val sslCtx = SslContextBuilder.forClient()
             .build()
 
@@ -113,16 +132,15 @@ class RelayHandler: SimpleChannelInboundHandler<FullHttpRequest>() {
                     ch.pipeline().addLast(
                         sslCtx.newHandler(ch.alloc()),
                         HttpClientCodec(),
-                        HttpContentDecompressor(),
                         HttpObjectAggregator(config.http.maxHttpContentSize * 1024),
                         ClientHandler(),
-                        FilterRecHtmlHandler(),
-                        FilterRecJsonHandler(),
-                        EchoHandler(),
+                        HttpContentDecompressor(),
+                        HttpObjectAggregator(config.http.maxHttpContentSize * 1024),
+                        *interceptorFactory(ch),
                     )
                 }
             })
-            .connect("www.zhihu.com", 443)
+            .connect(host, 443)
     }
 
     override fun channelActive(ctx: ChannelHandlerContext) {

@@ -17,28 +17,24 @@ import com.toybox.util.writeUtf8
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
+import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpHeaderNames
+import io.netty.handler.codec.http.HttpResponse
 import io.netty.handler.codec.http.HttpResponseStatus
 import kotlin.text.startsWith
 
 private const val TAG = "FilterRecHtmlHandler"
 
-class FilterRecHtmlHandler: SimpleChannelInboundHandler<RequestResponsePair>() {
+@Path("/")
+@ContentType("text/html")
+class FilterRecHtmlHandler: HttpInterceptor() {
 
-    override fun acceptInboundMessage(msg: Any): Boolean {
-        val msg = (msg as? RequestResponsePair) ?: return false
-        return msg.req.uri() == "/"
-                && msg.resp.status() == HttpResponseStatus.OK
-                && msg.resp[HttpHeaderNames.CONTENT_TYPE]?.startsWith("text/html") == true
-                && msg.resp.content().startsWithAscii()
-    }
-
-    override fun channelRead0(ctx: ChannelHandlerContext, msg: RequestResponsePair) {
+    override fun channelRead0(ctx: ChannelHandlerContext, msg: FullHttpResponse) {
         Log.d(TAG, "channelRead0: accepted !")
-        val body = msg.resp.content()
+        val body = msg.content()
         handleBody(body, false)
-        msg.resp[HttpHeaderNames.CONTENT_LENGTH] = body.readableBytes()
-        ctx.writeAndFlush(msg.resp.retain())
+        msg[HttpHeaderNames.CONTENT_LENGTH] = body.readableBytes()
+        ctx.writeAndFlush(msg.retain())
     }
 
     fun handleBody(body: ByteBuf, test: Boolean) {
@@ -169,8 +165,8 @@ class FilterRecHtmlHandler: SimpleChannelInboundHandler<RequestResponsePair>() {
         val questionTitle = question.getAsString("title")
         val questionAuthor = question.getAsJsonObject("author").getAsString("name")
 
-        val isTitleBlack = config.http.blackList.isQuestionTitleBlack(questionTitle)
-        val isAuthorBlack = config.http.blackList.isQuestionAuthorBlack(questionAuthor)
+        val isTitleBlack = config.blackList.isTitleBlack(questionTitle)
+        val isAuthorBlack = config.blackList.isAuthorBlack(questionAuthor)
         
         Log.i(TAG, "isAnswerInBlackList: '$questionTitle' -> '$isTitleBlack'")
         Log.i(TAG, "isAnswerInBlackList: '$questionAuthor' -> '$isAuthorBlack'")
@@ -198,8 +194,8 @@ class FilterRecHtmlHandler: SimpleChannelInboundHandler<RequestResponsePair>() {
         val author = article.getAsJsonObject("author")
             .getAsString("name")
 
-        val isTitleInBlackList = config.http.blackList.isQuestionTitleBlack(title)
-        val isAuthorInBlackList = config.http.blackList.isQuestionAuthorBlack(author)
+        val isTitleInBlackList = config.blackList.isTitleBlack(title)
+        val isAuthorInBlackList = config.blackList.isAuthorBlack(author)
 
         Log.i(TAG, "isArticleInBlackList: '$title' -> '$isTitleInBlackList'")
         Log.i(TAG, "isArticleInBlackList: '$author' -> '$isAuthorInBlackList'")
@@ -265,7 +261,7 @@ class FilterRecHtmlHandler: SimpleChannelInboundHandler<RequestResponsePair>() {
 
     private fun isBoringDiv(divText: StringBuilder, startIndex: Int, endIndex: Int): Boolean {
         val title = find(divText, startIndex, "<meta itemProp=\"name\" content=\"", "\"")
-        val result = config.http.blackList.isQuestionTitleBlack(title ?: "")
+        val result = config.blackList.isTitleBlack(title ?: "")
         Log.i(TAG, "filterDiv: check div: '$title' -> '$result'")
         return result
     }

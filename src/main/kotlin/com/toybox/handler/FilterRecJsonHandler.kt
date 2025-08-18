@@ -10,32 +10,23 @@ import com.toybox.util.gson
 import com.toybox.util.losslessInput
 import com.toybox.util.outputStream
 import com.toybox.util.set
-import com.toybox.util.startsWithAscii
-import com.toybox.util.toJsonArray
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
-import io.netty.channel.SimpleChannelInboundHandler
+import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpHeaderNames
-import io.netty.handler.codec.http.HttpResponseStatus
 
 private const val TAG = "FilterRecJsonHandler"
 
-class FilterRecJsonHandler: SimpleChannelInboundHandler<RequestResponsePair>() {
+@Path("/api/v3/feed/topstory/recommend")
+@ContentType("application/json")
+class FilterRecJsonHandler: HttpInterceptor() {
 
-    override fun acceptInboundMessage(msg: Any?): Boolean {
-        val msg = (msg as? RequestResponsePair) ?: return false
-        return msg.req.uri().startsWith("/api/v3/feed/topstory/recommend?")
-                && msg.resp.status() == HttpResponseStatus.OK
-                && msg.resp[HttpHeaderNames.CONTENT_TYPE]?.startsWith("application/json") == true
-                && msg.resp.content().startsWithAscii()
-    }
-
-    override fun channelRead0(ctx: ChannelHandlerContext, msg: RequestResponsePair) {
+    override fun channelRead0(ctx: ChannelHandlerContext, msg: FullHttpResponse) {
         Log.d(TAG, "channelRead0: accepted !")
-        val body = msg.resp.content()
+        val body = msg.content()
         handleBody(body, false)
-        msg.resp[HttpHeaderNames.CONTENT_LENGTH] = body.readableBytes()
-        ctx.writeAndFlush(msg.resp.retain())
+        msg[HttpHeaderNames.CONTENT_LENGTH] = body.readableBytes()
+        ctx.writeAndFlush(msg.retain())
     }
 
     fun handleBody(body: ByteBuf, test: Boolean) {
@@ -67,8 +58,8 @@ class FilterRecJsonHandler: SimpleChannelInboundHandler<RequestResponsePair>() {
         val title = question.getAsString("title")
         val author = question.getAsJsonObject("author").getAsString("name")
 
-        val isTitleBlack = config.http.blackList.isQuestionTitleBlack(title)
-        val isAuthorBlack = config.http.blackList.isQuestionAuthorBlack(author)
+        val isTitleBlack = config.blackList.isTitleBlack(title)
+        val isAuthorBlack = config.blackList.isAuthorBlack(author)
 
         Log.i(TAG, "isBoringAnswer: '$title' -> '$isTitleBlack'")
         Log.i(TAG, "isBoringAnswer: '$author' -> '$isAuthorBlack'")
@@ -87,8 +78,8 @@ class FilterRecJsonHandler: SimpleChannelInboundHandler<RequestResponsePair>() {
         val title = target.getAsString("title")
         val author = target.getAsJsonObject("author").getAsString("name")
 
-        val isTitleBlack = config.http.blackList.isQuestionTitleBlack(title)
-        val isAuthorBlack = config.http.blackList.isQuestionAuthorBlack(author)
+        val isTitleBlack = config.blackList.isTitleBlack(title)
+        val isAuthorBlack = config.blackList.isAuthorBlack(author)
 
         Log.i(TAG, "isBoringArticle: '$title' -> '$isTitleBlack'")
         Log.i(TAG, "isBoringArticle: '$author' -> '$isAuthorBlack'")

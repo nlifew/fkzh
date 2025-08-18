@@ -19,10 +19,6 @@ dependencies {
     implementation("io.netty:netty-buffer:$nettyVersion")
     implementation("io.netty:netty-transport:$nettyVersion")
     implementation("io.netty:netty-codec-http:$nettyVersion")
-    implementation("io.netty:netty-codec-dns:$nettyVersion")
-    implementation("io.netty:netty-resolver-dns:$nettyVersion")
-//    implementation("io.netty:netty-resolver-dns-native-macos:$nettyVersion")
-//    implementation("io.netty:netty-resolver-dns-native-linux:$nettyVersion")
 
     implementation("com.aayushatharva.brotli4j:brotli4j:${brotliVersion}")
     implementation("com.aayushatharva.brotli4j:native-osx-aarch64:${brotliVersion}")
@@ -35,5 +31,5 @@ tasks.test {
     useJUnitPlatform()
 }
 kotlin {
-    jvmToolchain(11)
+    jvmToolchain(17)
 }

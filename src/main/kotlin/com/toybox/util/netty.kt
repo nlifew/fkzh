@@ -3,33 +3,16 @@ package com.toybox.util
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufInputStream
 import io.netty.buffer.ByteBufOutputStream
-import io.netty.buffer.ByteBufUtil
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelPromise
-import io.netty.handler.codec.dns.DatagramDnsQuery
-import io.netty.handler.codec.dns.DatagramDnsResponse
-import io.netty.handler.codec.dns.DefaultDnsQuery
-import io.netty.handler.codec.dns.DefaultDnsResponse
-import io.netty.handler.codec.dns.DnsQuery
-import io.netty.handler.codec.dns.DnsResponse
-import io.netty.handler.codec.dns.DnsResponseCode
 import io.netty.handler.codec.http.DefaultHttpHeaders
 import io.netty.handler.codec.http.HttpMessage
 import io.netty.util.AsciiString
-import java.io.EOFException
 import java.io.FilterInputStream
-import java.io.FilterOutputStream
 import java.io.InputStream
-import java.io.OutputStream
-import java.io.OutputStreamWriter
 import java.net.SocketAddress
-import java.nio.ByteBuffer
 import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
-import java.util.logging.Filter
-import kotlin.math.ceil
-import kotlin.math.floor
-import kotlin.math.min
 
 fun ChannelHandlerContext.peerAddress(): SocketAddress? = channel().remoteAddress()
 fun ChannelHandlerContext.localAddress(): SocketAddress = channel().localAddress()
@@ -129,16 +112,4 @@ fun ChannelHandlerContext.writeCompact(msg: Any, promise: ChannelPromise) {
         }
     }
     write(msg, compact)
-}
-
-fun DnsQuery.newResponse(): DnsResponse {
-    return when (this) {
-        is DatagramDnsQuery -> DatagramDnsResponse(
-            recipient(), sender(), id(), opCode(), DnsResponseCode.NOERROR
-        )
-        is DefaultDnsQuery -> DefaultDnsResponse(
-            id(), opCode(), DnsResponseCode.NOERROR
-        )
-        else -> throw UnsupportedOperationException("unknown DnsQuery '$this'")
-    }
 }

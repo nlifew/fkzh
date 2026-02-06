@@ -6,6 +6,8 @@ group = "com.toybox"
 version = "1.0-SNAPSHOT"
 
 repositories {
+    maven(url = "https://maven.aliyun.com/repository/public/")
+    maven(url = "https://maven.aliyun.com/repository/central/")
     mavenCentral()
 }
 
@@ -22,7 +24,7 @@ dependencies {
 
     implementation("com.aayushatharva.brotli4j:brotli4j:${brotliVersion}")
     implementation("com.aayushatharva.brotli4j:native-osx-aarch64:${brotliVersion}")
-//    implementation("com.aayushatharva.brotli4j:native-linux-x86_64:${brotliVersion}")
+    implementation("com.aayushatharva.brotli4j:native-linux-x86_64:${brotliVersion}")
 
     testImplementation(kotlin("test"))
 }

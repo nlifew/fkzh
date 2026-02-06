@@ -36,6 +36,11 @@ class FilterRecJsonHandler: HttpInterceptor() {
         // 移除无聊的东西
         val newData = JsonArray()
         json.getAsJsonArray("data").forEach { item ->
+            val type = item.asJsonObject.getAsString("type")
+            // 移除广告类型
+            if (type != "feed") {
+                return@forEach
+            }
             val target = item.asJsonObject.getAsJsonObject("target")
             when (target.getAsString("type")) {
                 "answer" -> handleAnswer(item.asJsonObject, newData)

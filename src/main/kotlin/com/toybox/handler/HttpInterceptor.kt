@@ -2,12 +2,9 @@ package com.toybox.handler
 
 import com.toybox.util.get
 import io.netty.channel.ChannelHandlerContext
-import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.channel.socket.SocketChannel
 import io.netty.handler.codec.http.*
-import java.lang.ref.WeakReference
-import java.net.URL
 
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
@@ -53,15 +50,13 @@ abstract class HttpInterceptor: SimpleChannelInboundHandler<FullHttpResponse>() 
         return hitTest && msg is FullHttpResponse
     }
 
-    abstract override fun channelRead0(ctx: ChannelHandlerContext, msg: FullHttpResponse)
-
     private fun hitTest(evt: InterceptHitTest): Boolean {
         evt.result = onHitTest(evt.req, evt.resp)
         hitTest = evt.result
         return hitTest
     }
 
-    private fun onHitTest(req: HttpRequest, resp: HttpResponse): Boolean {
+    protected open fun onHitTest(req: HttpRequest, resp: HttpResponse): Boolean {
         if (path != null && req.path() != path) {
             return false
         }

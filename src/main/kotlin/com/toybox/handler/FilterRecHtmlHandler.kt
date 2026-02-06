@@ -4,24 +4,17 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.toybox.config
 import com.toybox.util.Log
-import com.toybox.util.get
 import com.toybox.util.getAsString
 import com.toybox.util.gson
 import com.toybox.util.readUtf8
 import com.toybox.util.reader
 import com.toybox.util.set
-import com.toybox.util.startsWithAscii
 import com.toybox.util.toMap
-import com.toybox.util.use
 import com.toybox.util.writeUtf8
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
-import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpHeaderNames
-import io.netty.handler.codec.http.HttpResponse
-import io.netty.handler.codec.http.HttpResponseStatus
-import kotlin.text.startsWith
 
 private const val TAG = "FilterRecHtmlHandler"
 
@@ -40,7 +33,7 @@ class FilterRecHtmlHandler: HttpInterceptor() {
     fun handleBody(body: ByteBuf, test: Boolean) {
         // 用 indexOf 和 substring 代替 document
         // val document = body.losslessInput().use { Jsoup.parse(it, "UTF-8", "zhihu.com") }
-        val document = body.use { it.readUtf8() }
+        val document = body.readUtf8()
 
         // js-initialData
         findAndReplace(
@@ -77,7 +70,7 @@ class FilterRecHtmlHandler: HttpInterceptor() {
         val text = StringBuilder()
 
         if (beginIndex == -1) {
-            beginIndex = document.indexOf(beginToken)
+            beginIndex = document.lastIndexOf(beginToken, preferredOffset + beginToken.length)
         }
         if (beginIndex > 0) {
             beginIndex += beginToken.length
@@ -98,24 +91,26 @@ class FilterRecHtmlHandler: HttpInterceptor() {
             document.replace(beginIndex, endIndex, text.toString())
         }
         val t3 = System.nanoTime()
-        Log.d(TAG, "findAndReplace: indexOf() cost '${(t1-t0)/1000_000}' ms, " +
+        Log.d(TAG, "findAndReplace: " +
+                "indexOf() cost '${(t1-t0)/1000_000}' ms, " +
                 "transfer() cost '${(t2-t1)/1000_0000}' ms, " +
-                "replace() cost '${(t3-t2)/1000_000}' ms.")
+                "replace() cost '${(t3-t2)/1000_000}' ms."
+        )
     }
 
-    private fun find(
-        document: StringBuilder, startIndex: Int,
-        startToken: String, endToken: String
-    ): String? {
-        var startIndex = document.indexOf(startToken, startIndex)
-            .takeIf { it > -1 } ?: return null
-        startIndex += startToken.length
-
-        val endIndex = document.indexOf(endToken, startIndex)
-            .takeIf { it > -1 } ?: return null
-
-        return document.substring(startIndex, endIndex)
-    }
+//    private fun find(
+//        document: StringBuilder, startIndex: Int,
+//        startToken: String, endToken: String
+//    ): String? {
+//        var startIndex = document.indexOf(startToken, startIndex)
+//            .takeIf { it > -1 } ?: return null
+//        startIndex += startToken.length
+//
+//        val endIndex = document.indexOf(endToken, startIndex)
+//            .takeIf { it > -1 } ?: return null
+//
+//        return document.substring(startIndex, endIndex)
+//    }
 
     private fun filterJson(jsonText: StringBuilder, test: Boolean) {
         val json = gson.fromJson(jsonText.reader(), JsonObject::class.java)
@@ -259,10 +254,10 @@ class FilterRecHtmlHandler: HttpInterceptor() {
         divText.clear().append(' ')
     }
 
-    private fun isBoringDiv(divText: StringBuilder, startIndex: Int, endIndex: Int): Boolean {
-        val title = find(divText, startIndex, "<meta itemProp=\"name\" content=\"", "\"")
-        val result = config.blackList.isTitleBlack(title ?: "")
-        Log.i(TAG, "filterDiv: check div: '$title' -> '$result'")
-        return result
-    }
+//    private fun isBoringDiv(divText: StringBuilder, startIndex: Int, endIndex: Int): Boolean {
+//        val title = find(divText, startIndex, "<meta itemProp=\"name\" content=\"", "\"")
+//        val result = config.blackList.isTitleBlack(title ?: "")
+//        Log.i(TAG, "filterDiv: check div: '$title' -> '$result'")
+//        return result
+//    }
 }

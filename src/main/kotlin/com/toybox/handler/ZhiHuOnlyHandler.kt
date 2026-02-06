@@ -1,5 +1,6 @@
 package com.toybox.handler
 
+import com.toybox.config
 import com.toybox.util.Log
 import com.toybox.util.base64
 import com.toybox.util.httpHeaders
@@ -39,13 +40,13 @@ class ZhiHuOnlyHandler: SimpleChannelInboundHandler<FullHttpRequest>() {
             peerAddress = it
         }
 
-        val host: String? = msg.headers()[HttpHeaderNames.HOST]
-        if (host?.endsWith("zhihu.com") != true) {
+        val host = msg.headers().getAsString(HttpHeaderNames.HOST) ?: ""
+        if (host != config.http.host) {
             Log.i(TAG, "channelRead0: invalid 'Host: $host' in '$peerAddress', close it")
             ctx.errorAndClose(HttpResponseStatus.BAD_REQUEST)
             return
         }
-        Log.i(TAG, "channelRead0: zhihu.com confirmed from '$peerAddress', fire it")
+        Log.i(TAG, "channelRead0: host confirmed from '$peerAddress', fire it")
         ctx.fireChannelRead(msg.retain())
     }
 
@@ -54,7 +55,7 @@ class ZhiHuOnlyHandler: SimpleChannelInboundHandler<FullHttpRequest>() {
             {
               "errno": ${code.code()},
               "errmsg": "${code.reasonPhrase()}",
-              "random_id": "${ByteArray(64).random().base64()}"
+              "request_id": "${ByteArray(64).random().base64()}"
             }
         """.trimIndent().toByteArray()
 
@@ -70,8 +71,8 @@ class ZhiHuOnlyHandler: SimpleChannelInboundHandler<FullHttpRequest>() {
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         super.channelActive(ctx)
-        Log.i(TAG, "channelActive: new tcp connected '$peerAddress'")
         peerAddress = ctx.peerAddress().toString()
+        Log.i(TAG, "channelActive: new tcp connected '$peerAddress'")
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext) {

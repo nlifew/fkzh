@@ -15,13 +15,32 @@ data class Config(
     val blackList: BlackList
 )
 
+enum class SSLPolicy {
+    @SerializedName("none")
+    NONE,
+    @SerializedName("unsecure")
+    UNSECURE,
+    @SerializedName("full")
+    FULL,
+}
+
 data class HttpConfig(
     @SerializedName("local_port")
     val localPort: Int,
     @SerializedName("local_addr")
     val localAddress: String,
+
+    @SerializedName("remote_addr")
+    val remoteAddress: String,
+    @SerializedName("remote_port")
+    val remotePort: Int,
+    @SerializedName("remote_ssl")
+    val remoteSSLPolicy: SSLPolicy,
+
     @SerializedName("max_http_content_size")
-    val maxHttpContentSize: Int
+    val maxHttpContentSize: Int,
+    @SerializedName("host")
+    val host: String,
 )
 
 data class BlackList(

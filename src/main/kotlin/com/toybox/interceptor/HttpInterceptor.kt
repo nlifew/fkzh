@@ -3,6 +3,7 @@ package com.toybox.interceptor
 import com.toybox.config
 import com.toybox.handler.FilterRecHtmlHandler
 import com.toybox.handler.FilterRecJsonHandler
+import com.toybox.handler.RemoveMomentsAdHandler
 import com.toybox.util.get
 import com.toybox.util.threadLocal
 import io.netty.channel.ChannelDuplexHandler
@@ -31,6 +32,7 @@ val interceptorFactory: (SocketChannel) -> Array<ChannelHandler> = {
     arrayOf(
         FilterRecHtmlHandler(),
         FilterRecJsonHandler(),
+        RemoveMomentsAdHandler(),
     )
 }
 

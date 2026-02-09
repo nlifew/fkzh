@@ -1,19 +1,16 @@
 package com.toybox.handler
 
-import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.toybox.config
+import com.toybox.interceptor.ContentType
+import com.toybox.interceptor.HttpInterceptor
+import com.toybox.interceptor.Path
 import com.toybox.util.Log
-import com.toybox.util.get
 import com.toybox.util.getAsString
-import com.toybox.util.gson
-import com.toybox.util.losslessInput
-import com.toybox.util.outputStream
-import com.toybox.util.set
-import io.netty.buffer.ByteBuf
-import io.netty.channel.ChannelHandlerContext
+import com.toybox.util.removeIf
+import com.toybox.util.useAsJson
 import io.netty.handler.codec.http.FullHttpResponse
-import io.netty.handler.codec.http.HttpHeaderNames
+import io.netty.handler.codec.http.HttpResponse
 
 private const val TAG = "FilterRecJsonHandler"
 
@@ -21,45 +18,31 @@ private const val TAG = "FilterRecJsonHandler"
 @ContentType("application/json")
 class FilterRecJsonHandler: HttpInterceptor() {
 
-    override fun channelRead0(ctx: ChannelHandlerContext, msg: FullHttpResponse) {
+    override fun onResponseHit(msg: FullHttpResponse): HttpResponse {
         Log.d(TAG, "channelRead0: accepted !")
-        val body = msg.content()
-        handleBody(body, false)
-        msg[HttpHeaderNames.CONTENT_LENGTH] = body.readableBytes()
-        ctx.writeAndFlush(msg.retain())
+        return msg.useAsJson<JsonObject> { handleBody(it, false) }
     }
 
-    fun handleBody(body: ByteBuf, test: Boolean) {
-        val json = body.losslessInput().reader().use {
-            gson.fromJson(it, JsonObject::class.java)
-        }
-        // 移除无聊的东西
-        val newData = JsonArray()
-        json.getAsJsonArray("data").forEach { item ->
+    fun handleBody(json: JsonObject, test: Boolean) {
+        json.getAsJsonArray("data").removeIf { item ->
             val type = item.asJsonObject.getAsString("type")
             // 移除广告类型
             if (type != "feed") {
-                return@forEach
+                return@removeIf true
             }
             val target = item.asJsonObject.getAsJsonObject("target")
             when (target.getAsString("type")) {
-                "answer" -> handleAnswer(item.asJsonObject, newData)
-                "article" -> handleArticle(item.asJsonObject, newData)
-                "zvideo" -> handleZVideo(item.asJsonObject, newData)
-                else -> newData.add(item) // 姑且放过吧
+                "answer" -> isBoringAnswer(item.asJsonObject)
+                "article" -> isBoringArticle(item.asJsonObject)
+                "zvideo" -> isBoringVideo(item.asJsonObject)
+                else -> false // 姑且放过吧
             }
-        }
-        json.add("data", newData)
-
-        // Gson 不会调 writer.flush()。如果我们也不调，会导致拿到的 json 不完整，囧
-        body.clear().outputStream().writer().use {
-            gson.toJson(json, it)
-            it.flush()
         }
     }
 
-    private fun handleAnswer(item: JsonObject, out: JsonArray) {
-        val question = item.getAsJsonObject("target").getAsJsonObject("question") ?: return
+    private fun isBoringAnswer(item: JsonObject): Boolean {
+        val question = item.getAsJsonObject("target")
+            .getAsJsonObject("question")
         val title = question.getAsString("title")
         val author = question.getAsJsonObject("author").getAsString("name")
 
@@ -70,15 +53,15 @@ class FilterRecJsonHandler: HttpInterceptor() {
         Log.i(TAG, "isBoringAnswer: '$author' -> '$isAuthorBlack'")
 
         if (isTitleBlack || isAuthorBlack) {
-            return
+            return true
         }
-        out.add(item)
 
         // 替换 title
         question.addProperty("title", "[回答]${title}")
+        return false
     }
 
-    private fun handleArticle(item: JsonObject, out: JsonArray) {
+    private fun isBoringArticle(item: JsonObject): Boolean {
         val target = item.getAsJsonObject("target")
         val title = target.getAsString("title")
         val author = target.getAsJsonObject("author").getAsString("name")
@@ -90,15 +73,16 @@ class FilterRecJsonHandler: HttpInterceptor() {
         Log.i(TAG, "isBoringArticle: '$author' -> '$isAuthorBlack'")
 
         if (isTitleBlack || isAuthorBlack) {
-            return
+            return true
         }
-        out.add(item)
         // 替换 title
         target.addProperty("title", "[专栏]${title}")
+        return false
     }
 
-    private fun handleZVideo(item: JsonObject, out: JsonArray) {
+    private fun isBoringVideo(item: JsonObject): Boolean {
         // always filter it
+        return true
     }
 }
 

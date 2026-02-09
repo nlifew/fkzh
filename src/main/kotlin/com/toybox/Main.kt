@@ -3,6 +3,7 @@ package com.toybox
 import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.toybox.handler.RelayHandler
 import com.toybox.handler.ZhiHuOnlyHandler
+import com.toybox.interceptor.interceptorFactory
 import com.toybox.util.gson
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.buffer.Unpooled
@@ -77,8 +78,8 @@ private fun startProxyServer() {
 //                    HttpServerKeepAliveHandler(),
                     HttpObjectAggregator(config.http.maxHttpContentSize * 1024, true),
 //                    EchoHandler(),
-//                    HttpContentCompressor(),
                     ZhiHuOnlyHandler(),
+                    *interceptorFactory(ch),
                     RelayHandler(),
                 )
             }

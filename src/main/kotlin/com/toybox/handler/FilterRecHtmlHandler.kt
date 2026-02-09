@@ -3,6 +3,9 @@ package com.toybox.handler
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.toybox.config
+import com.toybox.interceptor.ContentType
+import com.toybox.interceptor.HttpInterceptor
+import com.toybox.interceptor.Path
 import com.toybox.util.Log
 import com.toybox.util.getAsString
 import com.toybox.util.gson
@@ -12,9 +15,9 @@ import com.toybox.util.set
 import com.toybox.util.toMap
 import com.toybox.util.writeUtf8
 import io.netty.buffer.ByteBuf
-import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpHeaderNames
+import io.netty.handler.codec.http.HttpResponse
 
 private const val TAG = "FilterRecHtmlHandler"
 
@@ -22,12 +25,12 @@ private const val TAG = "FilterRecHtmlHandler"
 @ContentType("text/html")
 class FilterRecHtmlHandler: HttpInterceptor() {
 
-    override fun channelRead0(ctx: ChannelHandlerContext, msg: FullHttpResponse) {
+    override fun onResponseHit(msg: FullHttpResponse): HttpResponse {
         Log.d(TAG, "channelRead0: accepted !")
         val body = msg.content()
         handleBody(body, false)
         msg[HttpHeaderNames.CONTENT_LENGTH] = body.readableBytes()
-        ctx.writeAndFlush(msg.retain())
+        return msg
     }
 
     fun handleBody(body: ByteBuf, test: Boolean) {

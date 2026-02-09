@@ -12,15 +12,6 @@ import kotlin.random.Random
 
 inline fun <reified T> T.println() = also { println(it) }
 
-val gson = Gson()
-fun List<JsonElement>.toJsonArray() = JsonArray(size).also { array ->
-    forEach { array.add(it) }
-}
-
-fun JsonObject.getAsString(name: String): String {
-    return get(name).asString
-}
-
 fun ByteArray.random(off: Int = 0, len: Int = size): ByteArray {
     Random.Default.nextBytes(this, off, len)
     return this

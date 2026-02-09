@@ -4,23 +4,17 @@ import com.toybox.SSLPolicy
 import com.toybox.config
 import com.toybox.util.Log
 import com.toybox.util.peerAddress
-import com.toybox.util.writeCompact
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelDuplexHandler
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
-import io.netty.channel.ChannelPromise
 import io.netty.channel.EventLoop
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.http.FullHttpRequest
 import io.netty.handler.codec.http.HttpClientCodec
-import io.netty.handler.codec.http.HttpContentDecompressor
 import io.netty.handler.codec.http.HttpHeaderNames
-import io.netty.handler.codec.http.HttpObjectAggregator
-import io.netty.handler.codec.http.HttpResponse
-import io.netty.handler.codec.http.LastHttpContent
 import io.netty.handler.ssl.SslContext
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory
@@ -54,13 +48,12 @@ class RelayHandler: SimpleChannelInboundHandler<FullHttpRequest>() {
         // 替换 host
         msg.headers().set(HttpHeaderNames.HOST, config.http.host)
 
-        waitingRequests.add(msg.retain(2)) // [1]
-        // [1]. 第一次是保存到列表里，抵消 SimpleChannelInboundHandler 的 release，
-        // 第二次是传递给下一个 handler 需要增加一次
-
-        clientCtx?.also {
-            it.writeAndFlush(msg)
-        } ?: run {
+        val clientCtx = this.clientCtx
+        if (clientCtx != null) {
+            clientCtx.writeAndFlush(msg.retain())
+        } else {
+            waitingRequests.add(msg.retain()) // [1]
+            // [1]. 抵消 SimpleChannelInboundHandler 的 release
             // 还没有建立通往服务器的真链接，开始发起
             if (waitingRequests.size == 1) {
                 connectToHost(ctx.channel().eventLoop())
@@ -70,39 +63,8 @@ class RelayHandler: SimpleChannelInboundHandler<FullHttpRequest>() {
 
     private inner class ClientHandler: ChannelDuplexHandler() {
 
-        private var hitTestResult: Boolean? = null
-        private var host = ""
-
         override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
-            try {
-                channelRead0(ctx, msg)
-            } finally {
-                ReferenceCountUtil.release(msg)
-            }
-        }
-
-        private fun channelRead0(ctx: ChannelHandlerContext, msg: Any) {
-            if (msg is HttpResponse) {
-                check(hitTestResult == null)
-
-                val req = waitingRequests.removeFirst()
-                hitTestResult = InterceptHitTest(req, msg).let {
-                    ctx.fireUserEventTriggered(it)
-                    it.result
-                }
-                host = req.uri()
-                ReferenceCountUtil.release(req)
-            }
-            if (hitTestResult!!) {
-                ctx.fireChannelRead(ReferenceCountUtil.retain(msg))
-            } else {
-                thisCtx?.writeAndFlush(ReferenceCountUtil.retain(msg))
-            }
-
-            if (msg is LastHttpContent) {
-                hitTestResult = null
-                host = ""
-            }
+            thisCtx?.writeAndFlush(msg) ?: run { ReferenceCountUtil.release(msg) }
         }
 
         override fun channelActive(ctx: ChannelHandlerContext) {
@@ -110,7 +72,8 @@ class RelayHandler: SimpleChannelInboundHandler<FullHttpRequest>() {
                     "size = '${waitingRequests.size}'")
             super.channelActive(ctx)
             clientCtx = ctx
-            waitingRequests.forEach { ctx.write(it.retain()) }
+            waitingRequests.forEach { ctx.write(it) }
+            waitingRequests.clear()
             ctx.flush()
         }
 
@@ -119,14 +82,6 @@ class RelayHandler: SimpleChannelInboundHandler<FullHttpRequest>() {
             super.channelInactive(ctx)
             clientCtx = null
             thisCtx?.close()
-        }
-
-        override fun write(ctx: ChannelHandlerContext, msg: Any?, promise: ChannelPromise?) {
-            thisCtx?.writeCompact(msg, promise)
-        }
-
-        override fun flush(ctx: ChannelHandlerContext?) {
-            thisCtx?.flush()
         }
 
         override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
@@ -147,9 +102,6 @@ class RelayHandler: SimpleChannelInboundHandler<FullHttpRequest>() {
                     ch.pipeline().addLast(
                         HttpClientCodec(),
                         ClientHandler(),
-                        HttpContentDecompressor(),
-                        HttpObjectAggregator(config.http.maxHttpContentSize * 1024),
-                        *interceptorFactory(ch),
                     )
                 }
             })

@@ -1,18 +1,11 @@
 package com.toybox.util
 
-import io.netty.buffer.ByteBuf
-import io.netty.buffer.ByteBufInputStream
-import io.netty.buffer.ByteBufOutputStream
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelPromise
 import io.netty.handler.codec.http.DefaultHttpHeaders
 import io.netty.handler.codec.http.HttpMessage
 import io.netty.util.AsciiString
-import java.io.FilterInputStream
-import java.io.InputStream
 import java.net.SocketAddress
-import java.nio.CharBuffer
-import java.nio.charset.StandardCharsets
 
 fun ChannelHandlerContext.peerAddress(): SocketAddress? = channel().remoteAddress()
 fun ChannelHandlerContext.localAddress(): SocketAddress = channel().localAddress()

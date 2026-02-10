@@ -1,6 +1,7 @@
 package com.toybox.interceptor
 
 import com.toybox.config
+import com.toybox.handler.BlockHandler
 import com.toybox.handler.FilterRecHtmlHandler
 import com.toybox.handler.FilterRecJsonHandler
 import com.toybox.handler.RemoveMomentsAdHandler
@@ -33,6 +34,7 @@ val interceptorFactory: (SocketChannel) -> Array<ChannelHandler> = {
         FilterRecHtmlHandler(),
         FilterRecJsonHandler(),
         RemoveMomentsAdHandler(),
+        BlockHandler(),
     )
 }
 
@@ -55,7 +57,7 @@ abstract class HttpInterceptor: ChannelDuplexHandler() {
 
     private val isRequestHitTest = ArrayDeque<Boolean>()
     private var isResponseHitTest: Boolean? = null
-    private val sparseResponseList = arrayListOf<HttpObject>()
+    private val sparseResponseList = arrayListOf<Pair<HttpObject, ChannelPromise?>>()
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any?) {
         var resp: HttpResponse? = null
@@ -69,6 +71,7 @@ abstract class HttpInterceptor: ChannelDuplexHandler() {
             isRequestHitTest.add(hitTest)
             ctx.fireChannelRead(msg)
         } else {
+            ReferenceCountUtil.release(msg)
             ctx.writeAndFlush(resp)
         }
     }
@@ -99,20 +102,23 @@ abstract class HttpInterceptor: ChannelDuplexHandler() {
     }
 
     override fun write(ctx: ChannelHandlerContext, msg: Any?, promise: ChannelPromise?) {
-        var result: Any? = msg as HttpObject
+        var finalMsg: Any? = msg as HttpObject
+        var finalPromise = promise
 
         if (msg is HttpResponse) {
             check(isResponseHitTest == null)
             isResponseHitTest = isRequestHitTest.removeFirst() && hitTest(msg)
         }
         if (isResponseHitTest!!) {
-            result = aggregate(msg)?.let { onResponseHit(it) }
+            val pair = aggregate(ctx, msg, promise)
+            finalMsg = pair?.first?.let { onResponseHit(it) }
+            finalPromise = pair?.second
         }
         if (msg is LastHttpContent) {
             isResponseHitTest = null
         }
-        if (result != null) {
-            ctx.write(result, promise)
+        if (finalMsg != null) {
+            ctx.write(finalMsg, finalPromise)
         }
     }
 
@@ -124,25 +130,45 @@ abstract class HttpInterceptor: ChannelDuplexHandler() {
         return get(HttpHeaderNames.CONTENT_TYPE)
     }
 
-    private fun aggregate(msg: HttpObject): FullHttpResponse? {
+    private fun aggregate(
+        ctx: ChannelHandlerContext,
+        msg: HttpObject,
+        promise: ChannelPromise?
+    ): Pair<FullHttpResponse, ChannelPromise?>? {
         if (sparseResponseList.isEmpty() && msg is FullHttpResponse) {
-            return msg
+            return msg to promise
         }
-        sparseResponseList.add(msg)
+        sparseResponseList.add(msg to promise)
         if (msg !is LastHttpContent) {
             return null
         }
+
+        val httpObjects = sparseResponseList.map { it.first }
+        val promises = sparseResponseList.map { it.second }
+        sparseResponseList.clear()
+
         val channel = embeddedChannelRef.get()
         check(channel.inboundMessages().isEmpty())
-        channel.writeInbound(*sparseResponseList.toTypedArray())
-        sparseResponseList.clear()
+        channel.writeInbound(*httpObjects.toTypedArray())
         check(channel.inboundMessages().size == 1)
-        return channel.readInbound<FullHttpResponse>()
+
+        return channel.readInbound<FullHttpResponse>() to ctx.newPromise().addListener { f ->
+            if (f.isSuccess) {
+                promises.forEach { it?.setSuccess() }
+            } else {
+                promises.forEach { it?.setFailure(f.cause()) }
+            }
+        }
     }
 
     override fun handlerRemoved(ctx: ChannelHandlerContext?) {
         super.handlerRemoved(ctx)
-        sparseResponseList.forEach { ReferenceCountUtil.release(it) }
+        sparseResponseList.forEach {
+            ReferenceCountUtil.release(it.first)
+        }
+        sparseResponseList.forEach {
+            ReferenceCountUtil.release(it.second)
+        }
         sparseResponseList.clear()
     }
 }

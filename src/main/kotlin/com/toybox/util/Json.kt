@@ -20,13 +20,11 @@ fun JsonObject.getAsString(name: String): String {
 }
 
 fun JsonArray.removeIf(block: (JsonElement) -> Boolean) {
-    mapIndexedNotNull { i, it ->
-        if (!block(it)) {
-            return@mapIndexedNotNull null
+    val iterator = this.iterator()
+    while (iterator.hasNext()) {
+        if (block(iterator.next())) {
+            iterator.remove()
         }
-        i
-    }.forEach {
-        remove(it)
     }
 }
 

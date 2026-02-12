@@ -50,8 +50,8 @@ class FilterRecHtmlHandler: HttpInterceptor() {
         // div
         findAndReplace(
             document = document,
-            beginToken = "<div role=\"listitem\"></div>",
-            endToken = "<div role=\"listitem\"></div>",
+            beginToken = "<div class=\"ListShortcut\">",
+            endToken = "<div></div>",
             preferredOffset = 5 * 1024,
             block = { filterDiv(it, test) }
         )
@@ -241,20 +241,12 @@ class FilterRecHtmlHandler: HttpInterceptor() {
     }
 
     private fun filterDiv(divText: StringBuilder, test: Boolean) {
-        // 直接去掉吧…视觉效果并不好
-//        val token = "div class=\"Card TopstoryItem TopstoryItem-isRecommend\""
-//        var beginIndex = divText.indexOf(token).takeIf { it >= 0 } ?: return
-//        while (beginIndex + token.length < divText.length) {
-//            val endIndex = divText.indexOf(token, beginIndex + token.length)
-//                .takeIf { it > -1 } ?: divText.length
-//
-//            if (isBoringDiv(divText, beginIndex, endIndex)) {
-//                divText.deleteRange(beginIndex, endIndex)
-//            } else {
-//                beginIndex = endIndex
-//            }
-//        }
-        divText.clear().append(' ')
+        val token = "<div class=\"Card TopstoryItem TopstoryItem-isRecommend\""
+        val fromIdx = divText.indexOf(token)
+        if (fromIdx < 0) {
+            return
+        }
+        divText.setLength(fromIdx)
     }
 
 //    private fun isBoringDiv(divText: StringBuilder, startIndex: Int, endIndex: Int): Boolean {

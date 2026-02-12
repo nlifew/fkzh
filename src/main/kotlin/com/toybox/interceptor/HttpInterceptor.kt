@@ -15,6 +15,7 @@ import io.netty.channel.embedded.EmbeddedChannel
 import io.netty.channel.socket.SocketChannel
 import io.netty.handler.codec.http.*
 import io.netty.util.ReferenceCountUtil
+import kotlin.jvm.Throws
 
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
@@ -102,6 +103,15 @@ abstract class HttpInterceptor: ChannelDuplexHandler() {
     }
 
     override fun write(ctx: ChannelHandlerContext, msg: Any?, promise: ChannelPromise?) {
+        try {
+            writeOrThrow(ctx, msg, promise)
+        } catch (t: Throwable) {
+            exceptionCaught(ctx, t)
+        }
+    }
+
+    @Throws(Exception::class)
+    private fun writeOrThrow(ctx: ChannelHandlerContext, msg: Any?, promise: ChannelPromise?) {
         var finalMsg: Any? = msg as HttpObject
         var finalPromise = promise
 
@@ -150,6 +160,7 @@ abstract class HttpInterceptor: ChannelDuplexHandler() {
         val channel = embeddedChannelRef.get()
         check(channel.inboundMessages().isEmpty())
         channel.writeInbound(*httpObjects.toTypedArray())
+        channel.checkException()
         check(channel.inboundMessages().size == 1)
 
         return channel.readInbound<FullHttpResponse>() to ctx.newPromise().addListener { f ->

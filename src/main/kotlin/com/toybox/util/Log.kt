@@ -18,6 +18,10 @@ object Log {
         println("D", tag, msg, e)
     }
 
+    fun w(tag: String, msg: String, e: Throwable? = null) {
+        println("W", tag, msg, e)
+    }
+
     fun e(tag: String, msg: String, e: Throwable? = null) {
         println("E", tag, msg, e)
     }

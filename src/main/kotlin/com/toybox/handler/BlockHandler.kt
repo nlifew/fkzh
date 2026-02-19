@@ -24,7 +24,9 @@ private val uriMatcher = UriMatcher(NO_MATCH).apply {
     addPath("/api/v3/entity_word", 200)                     // 回答中的知乎直达高亮词
     addPath("/ai_ingress/general/conf", 200)                // 知乎直达
     addPath("/ai_ingress/general/me", 200)
-    addPath("/lastread/touch", 201)                         // 触摸位置上报
+//    addPath("/lastread/touch", 201)                         // 触摸位置上报 [1]
+    addPath("/api/v4/answers/#/relationship", 200)          // XXX人赞同了该回答
+    // [1]. 不能block掉，否则会造成重复推荐
 }
 
 class BlockHandler: HttpInterceptor() {

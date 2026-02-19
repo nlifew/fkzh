@@ -31,12 +31,22 @@ class FilterRecJsonHandler: HttpInterceptor() {
                 return@removeIf true
             }
             val target = item.asJsonObject.getAsJsonObject("target")
-            when (target.getAsString("type")) {
+            when (val type = target.getAsString("type")) {
                 "answer" -> isBoringAnswer(item.asJsonObject)
                 "article" -> isBoringArticle(item.asJsonObject)
-                "zvideo" -> isBoringVideo(item.asJsonObject)
-                else -> false // 姑且放过吧
+                "zvideo", "pin" -> true // 视频和固定卡片都删除掉
+                else -> {
+                    // 姑且放过吧
+                    Log.w(TAG, "handleBody: unknown target.type:'${type}'")
+                    false
+                }
             }
+        }
+
+        // 移除划线
+        json.getAsJsonArray("data").forEach { item ->
+            val target = item.asJsonObject.getAsJsonObject("target")
+            target.remove("segment_infos")
         }
     }
 
@@ -78,11 +88,6 @@ class FilterRecJsonHandler: HttpInterceptor() {
         // 替换 title
         target.addProperty("title", "[专栏]${title}")
         return false
-    }
-
-    private fun isBoringVideo(item: JsonObject): Boolean {
-        // always filter it
-        return true
     }
 }
 

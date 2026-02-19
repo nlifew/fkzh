@@ -1,9 +1,8 @@
 package com.toybox.interceptor
 
-import java.net.URL
-
 private const val EXACT = 0
 private const val TEXT = 1
+private const val NUMBER = 2
 
 const val NO_MATCH = -1
 
@@ -37,6 +36,7 @@ class UriMatcher private constructor(
     private fun createChild(token: String): UriMatcher {
         return when (token) {
             "*" -> UriMatcher(NO_MATCH, TEXT, "*")
+            "#" -> UriMatcher(NO_MATCH, NUMBER, "#")
             else -> UriMatcher(NO_MATCH, EXACT, token)
         }
     }
@@ -60,6 +60,7 @@ class UriMatcher private constructor(
     private fun matchSingle(path: String): Boolean {
         return when (mWhich) {
             EXACT -> mText == path
+            NUMBER -> path.all { it in '0'..'9' }
             TEXT -> true
             else -> TODO()
         }

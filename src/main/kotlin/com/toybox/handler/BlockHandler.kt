@@ -17,6 +17,7 @@ import io.netty.handler.codec.http.QueryStringDecoder
 
 private val uriMatcher = UriMatcher(NO_MATCH).apply {
     addPath("/commercial_api/banners_v3/*", 200)            // 各种banner
+    addPath("/api/v4/question/#/banner", 200)               // 问题详情下的 banner
     addPath("/api/v4/search/hot_search", 200)               // 大家都在搜
     addPath("/api/v4/moments/recommend_follow_people", 200) // 推荐关注
     addPath("/api/v4/creators/extra_card", 200)             // 创作中心中的广告
@@ -27,6 +28,10 @@ private val uriMatcher = UriMatcher(NO_MATCH).apply {
 //    addPath("/lastread/touch", 201)                         // 触摸位置上报 [1]
     addPath("/api/v4/answers/#/relationship", 200)          // XXX人赞同了该回答
     // [1]. 不能block掉，否则会造成重复推荐
+
+    addPath("/api/v4/questions/#/similar-questions", 200)   // 相关问题推荐
+    addPath("/api/v4/questions/#/labels/v2", 200)           // 圆桌收录：2026新春放映室
+    addPath("/v5.1/topics/question/#/relation/v2", 200)     // 相关电影卡片
 }
 
 class BlockHandler: HttpInterceptor() {

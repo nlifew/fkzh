@@ -34,18 +34,6 @@ class ZhiHuOnlyHandler: SimpleChannelInboundHandler<FullHttpRequest>() {
             ctx.errorAndClose(HttpResponseStatus.BAD_REQUEST)
             return
         }
-        // 更新原 ip
-        msg.headers()["x-real-ip"]?.takeIf { it.isNotEmpty() }?.also {
-            Log.i(TAG, "channelRead0: map ip from '$peerAddress' to '$it'")
-            peerAddress = it
-        }
-
-        val host = msg.headers().getAsString(HttpHeaderNames.HOST) ?: ""
-        if (host != config.http.host) {
-            Log.i(TAG, "channelRead0: invalid 'Host: $host' in '$peerAddress', close it")
-            ctx.errorAndClose(HttpResponseStatus.BAD_REQUEST)
-            return
-        }
         Log.i(TAG, "channelRead0: host confirmed from '$peerAddress', fire it")
         ctx.fireChannelRead(msg.retain())
     }

@@ -6,7 +6,7 @@ import java.util.Calendar
 import java.util.Formatter
 
 object Log {
-    private var impl: LogImpl = PrintlnLogImpl()
+    var impl: LogImpl = PrintlnLogImpl()
 
     fun i(tag: String, msg: String, e: Throwable? = null) {
         impl.println("I", tag, msg, e)
@@ -25,7 +25,7 @@ object Log {
     }
 }
 
-private interface LogImpl {
+interface LogImpl {
     fun println(level: String, tag: String, msg: String, e: Throwable?)
 }
 

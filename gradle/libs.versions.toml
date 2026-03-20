@@ -12,6 +12,7 @@ gson="2.10.1"
 okhttp="3.14.9"
 netty="4.1.118.Final"
 brotli4j="1.18.0"
+jetbrainsKotlinJvm = "2.0.21"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -32,4 +33,5 @@ netty-codec-http = { group = "io.netty", name = "netty-codec-http", version.ref 
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
+jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }
 

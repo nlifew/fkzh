@@ -31,7 +31,7 @@ class MainActivity: AppCompatActivity(), View.OnClickListener {
         return super.onKeyDown(keyCode, event)
     }
 
-    override fun onClick(v: View?) {
+    override fun onClick(v: View) {
         Brotli4jLoader.ensureAvailability()
 
         // Compress data and get output in byte array
@@ -44,7 +44,7 @@ class MainActivity: AppCompatActivity(), View.OnClickListener {
         if (directDecompress.resultStatus === DecoderJNI.Status.DONE) {
             Toast.makeText(this, "Decompression Successful: " + String(directDecompress.getDecompressedData()), Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(this, "Some Error Occurred While Decompressing", Toast.LENGTH_SHORT)
+            Toast.makeText(this, "Some Error Occurred While Decompressing", Toast.LENGTH_SHORT).show()
         }
     }
 }

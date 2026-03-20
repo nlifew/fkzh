@@ -5,6 +5,7 @@ import com.toybox.handler.RelayHandler
 import com.toybox.handler.ZhiHuOnlyHandler
 import com.toybox.interceptor.interceptorFactory
 import com.toybox.util.gson
+import com.toybox.util.Log
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
@@ -20,27 +21,24 @@ import io.netty.handler.codec.http.FullHttpRequest
 import io.netty.handler.codec.http.HttpObjectAggregator
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpServerCodec
-import io.netty.handler.codec.http.HttpServerKeepAliveHandler
 import io.netty.handler.codec.http.HttpVersion
 import io.netty.util.ResourceLeakDetector
 import java.io.File
 
 lateinit var nio: NioEventLoopGroup
 
-fun envSetup() {
-    config = File("config.json").reader().use {
-        gson.fromJson(it, Config::class.java)
-    }
+fun envSetup(configFile: File) {
+    config = configFile.reader().use { gson.fromJson(it, Config::class.java) }
 
     Brotli4jLoader.ensureAvailability()
     ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.ADVANCED)
     nio = NioEventLoopGroup(config.threadNum)
 }
 
-fun main() {
-    envSetup()
+fun main(args: Array<String>) {
+    envSetup(File(args[0]))
     startProxyServer()
-    println("ok")
+    Log.i("Main", "main: ok")
 }
 
 private class EchoHandler: SimpleChannelInboundHandler<FullHttpRequest>() {

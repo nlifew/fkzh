@@ -59,13 +59,9 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.okhttp)
-    implementation(libs.gson)
-
-    implementation(libs.netty.buffer)
-    implementation(libs.netty.transport)
-    implementation(libs.netty.codec.http)
 
     implementation(project(":brotli4j"))
+    implementation(project(":fkzh"))
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

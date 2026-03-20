@@ -1,32 +1,37 @@
 package com.toybox.util
 
 import java.io.PrintWriter
-import java.io.StringWriter
 import java.io.Writer
-import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Formatter
-import kotlin.math.min
-
 
 object Log {
+    private var impl: LogImpl = PrintlnLogImpl()
+
     fun i(tag: String, msg: String, e: Throwable? = null) {
-        println("I", tag, msg, e)
+        impl.println("I", tag, msg, e)
     }
 
     fun d(tag: String, msg: String, e: Throwable? = null) {
-        println("D", tag, msg, e)
+        impl.println("D", tag, msg, e)
     }
 
     fun w(tag: String, msg: String, e: Throwable? = null) {
-        println("W", tag, msg, e)
+        impl.println("W", tag, msg, e)
     }
 
     fun e(tag: String, msg: String, e: Throwable? = null) {
-        println("E", tag, msg, e)
+        impl.println("E", tag, msg, e)
     }
+}
 
-    fun println(level: String, tag: String, msg: String, e: Throwable?) {
+private interface LogImpl {
+    fun println(level: String, tag: String, msg: String, e: Throwable?)
+}
+
+
+private class PrintlnLogImpl: LogImpl {
+    override fun println(level: String, tag: String, msg: String, e: Throwable?) {
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR)
         val month = calendar.get(Calendar.MONTH) + 1
@@ -48,8 +53,8 @@ object Log {
             override fun flush() { /* no-op */ }
             override fun close() { /* no-op */ }
         }
-        e?.printStackTrace(PrintWriter(writer))
 
+        e?.printStackTrace(PrintWriter(writer))
         System.err.println(sb)
     }
 }

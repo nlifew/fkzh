@@ -44,7 +44,6 @@ android {
 }
 
 dependencies {
-    api(libs.brotli4j)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

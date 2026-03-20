@@ -61,7 +61,14 @@ dependencies {
     implementation(libs.okhttp)
 
     implementation(project(":brotli4j"))
-    implementation(project(":fkzh"))
+    implementation(project(":fkzh")) {
+        arrayOf(
+            libs.brotli4j.linux.amd64.get(),
+            libs.brotli4j.macos.arm64.get(),
+        ).forEach {
+            exclude(group = it.group, module = it.name)
+        }
+    }
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

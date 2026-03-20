@@ -27,3 +27,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "fkzh"
 include(":app")
+include(":brotli4j")

@@ -61,13 +61,11 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.gson)
 
-    implementation(libs.brotli4j)
     implementation(libs.netty.buffer)
     implementation(libs.netty.transport)
     implementation(libs.netty.codec.http)
 
-//    implementation(project(":nativelib"))
-
+    implementation(project(":brotli4j"))
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -27,16 +27,23 @@ import java.io.File
 
 lateinit var nio: NioEventLoopGroup
 
-fun envSetup(configFile: File) {
-    config = configFile.reader().use { gson.fromJson(it, Config::class.java) }
-
+fun envSetup(configFilePath: String) {
+    config = File(configFilePath).reader().use {
+        gson.fromJson(it, Config::class.java)
+    }
     Brotli4jLoader.ensureAvailability()
     ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.ADVANCED)
     nio = NioEventLoopGroup(config.threadNum)
 }
 
 fun main(args: Array<String>) {
-    envSetup(File(args[0]))
+    val args = args.associate {
+        val ss = it.substringAfter("--").split('=')
+        ss[0] to (ss.getOrNull(1) ?: "")
+    }
+
+    envSetup(args["config"] ?: throw IllegalArgumentException("no --config argument found"))
+
     startProxyServer()
     Log.i("Main", "main: ok")
 }

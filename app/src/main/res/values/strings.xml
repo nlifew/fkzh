@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">fkzh</string>
-
+    <string name="proxy_notification_channel_name">Proxy Service</string>
+    <string name="proxy_notification_title">Proxy Service Is Running</string>
+    <string name="proxy_notification_message">click here to enter app</string>
+    <string name="proxy_notification_no_perm">Notification Permission Is Disabled</string>
 </resources>

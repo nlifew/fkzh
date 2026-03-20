@@ -45,9 +45,6 @@ class RelayHandler: SimpleChannelInboundHandler<FullHttpRequest>() {
     override fun channelRead0(ctx: ChannelHandlerContext, msg: FullHttpRequest) {
         Log.i(TAG, "channelRead0: '${ctx.peerAddress()}' >>>>>>>> '${msg.uri()}'")
 
-        // 替换 host
-        msg.headers().set(HttpHeaderNames.HOST, config.http.host)
-
         val clientCtx = this.clientCtx
         if (clientCtx != null) {
             clientCtx.writeAndFlush(msg.retain())

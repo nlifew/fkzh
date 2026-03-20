@@ -39,8 +39,6 @@ data class HttpConfig(
 
     @SerializedName("max_http_content_size")
     val maxHttpContentSize: Int,
-    @SerializedName("host")
-    val host: String,
 )
 
 data class BlackList(

@@ -13,7 +13,7 @@ dependencies {
     implementation(libs.netty.codec.http)
 
     // 默认运行时添加所有依赖
-    api(libs.brotli4j)
+    implementation(libs.brotli4j)
     runtimeOnly(libs.brotli4j.linux.amd64)
     runtimeOnly(libs.brotli4j.macos.arm64)
 }

@@ -8,28 +8,23 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <ImageButton
-        android:id="@+id/btn_down"
-        android:layout_width="54dp"
-        android:layout_height="54dp"
-        android:layout_marginEnd="60dp"
-        android:layout_marginBottom="60dp"
-        android:src="@android:drawable/arrow_down_float"
-        android:scaleType="centerCrop"
-        android:onClick="onClick"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+    <Button
+        android:id="@+id/btn_service"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <ImageButton
-        android:id="@+id/btn_up"
-        android:layout_width="54dp"
-        android:layout_height="54dp"
-        android:scaleType="centerCrop"
-        android:layout_marginBottom="20dp"
-        android:src="@android:drawable/arrow_up_float"
-        android:onClick="onClick"
-        app:layout_constraintEnd_toEndOf="@id/btn_down"
-        app:layout_constraintBottom_toTopOf="@id/btn_down"/>
-
+    <Button
+        android:id="@+id/btn_check"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:text="CHECK"
+        app:layout_constraintTop_toBottomOf="@id/btn_service"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

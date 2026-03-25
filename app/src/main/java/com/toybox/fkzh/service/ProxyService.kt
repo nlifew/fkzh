@@ -3,6 +3,7 @@ package com.toybox.fkzh.service
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -10,6 +11,7 @@ import android.os.IBinder
 import androidx.lifecycle.MutableLiveData
 import com.toybox.fkzh.R
 import com.toybox.fkzh.app.appContext
+import com.toybox.fkzh.ui.MainActivity
 import com.toybox.main
 import com.toybox.shutdown
 import java.io.File
@@ -58,7 +60,13 @@ class ProxyService: Service() {
             .setContentTitle(getString(R.string.proxy_notification_title))
             .setContentText(getString(R.string.proxy_notification_message))
             .setSmallIcon(R.mipmap.ic_launcher_round)
-            .setContentIntent(null)
+            .setContentIntent(PendingIntent.getActivity(
+                appContext,
+                1,
+                Intent(appContext, MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            ))
             .build()
         startForeground(NOTIFICATION_ID, notification)
     }

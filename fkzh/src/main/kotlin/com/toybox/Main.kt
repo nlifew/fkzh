@@ -6,8 +6,10 @@ import com.toybox.handler.ZhiHuOnlyHandler
 import com.toybox.interceptor.interceptorFactory
 import com.toybox.util.gson
 import com.toybox.util.Log
+import com.toybox.util.openFile
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.buffer.Unpooled
+import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.SimpleChannelInboundHandler
@@ -22,13 +24,14 @@ import io.netty.handler.codec.http.HttpObjectAggregator
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpServerCodec
 import io.netty.handler.codec.http.HttpVersion
+import io.netty.handler.ssl.SslContextBuilder
 import io.netty.util.ResourceLeakDetector
-import java.io.File
 
 lateinit var nio: NioEventLoopGroup
+private var channel: Channel? = null
 
 fun envSetup(configFilePath: String) {
-    config = File(configFilePath).reader().use {
+    config = openFile(configFilePath).reader().use {
         gson.fromJson(it, Config::class.java)
     }
     Brotli4jLoader.ensureAvailability()
@@ -69,15 +72,25 @@ private class EchoHandler: SimpleChannelInboundHandler<FullHttpRequest>() {
         )
         ctx.writeAndFlush(resp)
     }
-
 }
 
 private fun startProxyServer() {
-    ServerBootstrap()
+    val sslCtx = when (config.http.localSSLPolicy) {
+        SSLPolicy.NONE -> null
+        else -> SslContextBuilder.forServer(
+            openFile(config.http.localCert),
+            openFile(config.http.localKey),
+        ).build()
+    }
+
+    channel = ServerBootstrap()
         .channel(NioServerSocketChannel::class.java)
         .group(nio, nio)
         .childHandler(object: ChannelInitializer<SocketChannel>() {
             override fun initChannel(ch: SocketChannel) {
+                sslCtx?.newHandler(ch.alloc())?.let {
+                    ch.pipeline().addLast(it)
+                }
                 ch.pipeline().addLast(
                     HttpServerCodec(),
 //                    HttpServerKeepAliveHandler(),
@@ -90,5 +103,10 @@ private fun startProxyServer() {
             }
         })
         .bind(config.http.localAddress, config.http.localPort)
-        .await()
+        .await().channel()
+}
+
+fun shutdown() {
+    channel?.close()
+    nio.shutdownGracefully()
 }

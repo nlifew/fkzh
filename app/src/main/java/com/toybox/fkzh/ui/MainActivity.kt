@@ -1,30 +1,30 @@
 package com.toybox.fkzh.ui
 
 import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.KeyEvent
-import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
+import com.toybox.SSLPolicy
 import com.toybox.config
 import com.toybox.fkzh.R
 import com.toybox.fkzh.databinding.ActivityMainBinding
-import com.toybox.fkzh.service.ProxyService
 import com.toybox.fkzh.service.alive
+import com.toybox.fkzh.service.startProxyService
+import com.toybox.fkzh.service.stopProxyService
 import com.toybox.fkzh.util.hasPermission
 import com.toybox.fkzh.util.toast
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import java.io.IOException
+import java.net.InetAddress
 
 private const val TAG = "MainActivity"
 
@@ -63,10 +63,6 @@ class MainActivity: AppCompatActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
-    private val proxyServiceIntent by lazy {
-        Intent(this, ProxyService::class.java)
-    }
-
     private fun checkNotificationAndSwitchStatus() {
         when {
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU -> {
@@ -84,9 +80,9 @@ class MainActivity: AppCompatActivity() {
     private fun switchServiceStatus() {
         viewBinding.btnService.isEnabled = false
         if (alive.value == true) {
-            stopService(proxyServiceIntent)
+            stopProxyService()
         } else {
-            startService(proxyServiceIntent)
+            startProxyService()
         }
     }
 
@@ -102,6 +98,12 @@ class MainActivity: AppCompatActivity() {
         OkHttpClient.Builder()
             .followRedirects(false)
             .followSslRedirects(false)
+            .dns {
+                when (it) {
+                    "www.zhihu.com" -> listOf(InetAddress.getLoopbackAddress())
+                    else -> Dns.SYSTEM.lookup(it)
+                }
+            }
             .build()
     }
 
@@ -111,11 +113,14 @@ class MainActivity: AppCompatActivity() {
             return
         }
         val request = Request.Builder()
-            .url("http://127.0.0.1:${config.http.localPort}/")
-            .header("Host", "www.zhihu.com")
-            .build()
 
-        okhttpClient.newCall(request).enqueue(object: Callback {
+        if (config.http.localSSLPolicy != SSLPolicy.NONE) {
+            request.url("https://www.zhihu.com:${config.http.localPort}/")
+        } else {
+            request.url("http://www.zhihu.com:${config.http.localPort}/")
+        }
+
+        okhttpClient.newCall(request.build()).enqueue(object: Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e(TAG, "onFailure: ", e)
                 toast { "failed: ${e.message}" }

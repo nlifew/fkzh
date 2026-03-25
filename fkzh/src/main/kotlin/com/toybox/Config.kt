@@ -29,6 +29,12 @@ data class HttpConfig(
     val localPort: Int,
     @SerializedName("local_addr")
     val localAddress: String,
+    @SerializedName("local_ssl")
+    val localSSLPolicy: SSLPolicy,
+    @SerializedName("local_cert")
+    val localCert: String,
+    @SerializedName("local_key")
+    val localKey: String,
 
     @SerializedName("remote_addr")
     val remoteAddress: String,

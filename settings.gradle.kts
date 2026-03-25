@@ -1,5 +1,31 @@
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+pluginManagement {
+    repositories {
+        maven(url = "https://maven.aliyun.com/repository/public/" )
+        maven(url = "https://maven.aliyun.com/repository/central" )
+        maven(url = "https://maven.aliyun.com/repository/gradle-plugin" )
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
 }
-rootProject.name = "fkzh"
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        maven(url = "https://maven.aliyun.com/repository/public/" )
+        maven(url = "https://maven.aliyun.com/repository/central" )
+        maven(url = "https://maven.aliyun.com/repository/gradle-plugin" )
+        google()
+        mavenCentral()
+    }
+}
 
+rootProject.name = "fkzh"
+include(":app")
+include(":brotli4j")
+include(":fkzh")

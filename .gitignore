@@ -42,5 +42,9 @@ bin/
 .DS_Store
 
 src/test
+local.properties
 
 config.json
+*.crt
+*.pem
+*.key

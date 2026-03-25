@@ -1,6 +1,8 @@
 package com.toybox.fkzh.ui
 
 import android.Manifest
+import android.content.Intent
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -8,6 +10,7 @@ import android.view.KeyEvent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 import com.toybox.SSLPolicy
 import com.toybox.config
 import com.toybox.fkzh.R
@@ -53,6 +56,7 @@ class MainActivity: AppCompatActivity() {
         alive.observe(this, this::onServiceStateChanged)
 
         viewBinding.btnCheck.setOnClickListener { check() }
+        viewBinding.btnStartChrome.setOnClickListener { startChrome() }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -132,5 +136,20 @@ class MainActivity: AppCompatActivity() {
                 response.close()
             }
         })
+    }
+
+
+    private fun startChrome() {
+        val uiMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        val isDark = (uiMode == Configuration.UI_MODE_NIGHT_YES)
+
+        var url = "https://www.zhihu.com/"
+        if (isDark) { url += "?theme=dark" }
+
+        Intent(Intent.ACTION_VIEW).apply {
+            setData(url.toUri())
+            addCategory(Intent.CATEGORY_BROWSABLE)
+            startActivity(this)
+        }
     }
 }

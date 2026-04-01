@@ -108,5 +108,7 @@ private fun startProxyServer() {
 
 fun shutdown() {
     channel?.close()
+    channel?.closeFuture()?.await()
+    channel = null
     nio.shutdownGracefully()
 }

@@ -5,6 +5,8 @@ import com.toybox.handler.BlockHandler
 import com.toybox.handler.FilterRecHtmlHandler
 import com.toybox.handler.FilterRecJsonHandler
 import com.toybox.handler.RemoveMomentsAdHandler
+import com.toybox.handler.FilterQuestionHtmlHandler
+import com.toybox.handler.FilterQuestionJsonHandler
 import com.toybox.util.get
 import com.toybox.util.threadLocal
 import io.netty.channel.ChannelDuplexHandler
@@ -19,6 +21,7 @@ import kotlin.jvm.Throws
 
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
+@Repeatable
 annotation class Path(val value: String)
 
 @Target(AnnotationTarget.CLASS)
@@ -35,6 +38,8 @@ val interceptorFactory: (SocketChannel) -> Array<ChannelHandler> = {
         FilterRecHtmlHandler(),
         FilterRecJsonHandler(),
         RemoveMomentsAdHandler(),
+        FilterQuestionHtmlHandler(),
+        FilterQuestionJsonHandler(),
         BlockHandler(),
     )
 }
@@ -48,7 +53,12 @@ private val embeddedChannelRef = threadLocal {
 
 abstract class HttpInterceptor: ChannelDuplexHandler() {
 
-    private val path = ann<Path>()?.value
+    private val path = UriMatcher(NO_MATCH).also { matcher ->
+        javaClass.getDeclaredAnnotationsByType<Path>(Path::class.java).forEach {
+            matcher.addPath(it.value, 1)
+        }
+    }
+
     private val code = ann<Code>()?.value ?: 200
     private val contentType = ann<ContentType>()?.value
 
@@ -78,7 +88,7 @@ abstract class HttpInterceptor: ChannelDuplexHandler() {
     }
 
     protected open fun hitTest(req: HttpRequest): Boolean {
-        if (path != null && req.path() != path) {
+        if (path.matchPath(req.path()) == NO_MATCH) {
             return false
         }
         return true

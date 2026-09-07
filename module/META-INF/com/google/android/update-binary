@@ -1,0 +1,34 @@
+#!/sbin/sh
+##########################################################################
+# KernelSU / Magisk 模块安装器样板。
+# KernelSU 从管理器 App 内安装时会自己解压并执行 customize.sh，这个文件主要
+# 是为了兼容 Magisk 和 Recovery 刷入。
+##########################################################################
+
+umask 022
+
+OUTFD=$2
+ZIPFILE=$3
+
+ui_print() { echo "$1"; }
+
+require_root() {
+    ui_print "*******************************************"
+    ui_print " 本模块需要 KernelSU 或 Magisk 20.4+ "
+    ui_print "*******************************************"
+    exit 1
+}
+
+mount /data 2>/dev/null
+
+if [ -f /data/adb/ksu/util_functions.sh ]; then
+    . /data/adb/ksu/util_functions.sh
+elif [ -f /data/adb/magisk/util_functions.sh ]; then
+    . /data/adb/magisk/util_functions.sh
+    [ "$MAGISK_VER_CODE" -lt 20400 ] && require_root
+else
+    require_root
+fi
+
+install_module
+exit 0

@@ -1,0 +1,6 @@
+id=zhihu_redirect
+name=Zhihu Redirect
+version=v1.0.0
+versionCode=1
+author=wangaihu
+description=开机时将 www.zhihu.com 解析到 127.0.0.1，并把 Chrome(com.android.chrome) 发往 127.0.0.1:443 的 TCP 连接重定向到 127.0.0.1:8000
